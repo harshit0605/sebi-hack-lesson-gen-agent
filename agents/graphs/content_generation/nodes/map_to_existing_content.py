@@ -12,7 +12,10 @@ from langchain_core.prompts import (
 
 
 async def map_to_existing_content(state: LessonCreationState) -> LessonCreationState:
-    """Map new content to existing lessons and identify integration opportunities"""
+    """Map new content to existing lessons and identify integration opportunities.
+
+    Returns only: `existing_content_mappings`, `current_step`.
+    """
 
     content_analysis = state["content_analysis"]
     # existing_lessons = state["existing_lessons"]
@@ -23,9 +26,7 @@ async def map_to_existing_content(state: LessonCreationState) -> LessonCreationS
     #     state["current_step"] = "content_mapped"
     #     return state
     if journeys_summary == "":
-        state["existing_content_mappings"] = []
-        state["current_step"] = "content_mapped"
-        return state
+        return {"existing_content_mappings": [], "current_step": "content_mapped"}
 
     # mapping_prompt = MAP_TO_EXISTING_CONTENT_PROMPTS["content_mapping"]
 
@@ -55,6 +56,4 @@ async def map_to_existing_content(state: LessonCreationState) -> LessonCreationS
     #     mappings = [mappings] if mappings else []
 
     # state["existing_content_mappings"] = mappings
-    state["existing_content_mappings"] = []
-    state["current_step"] = "content_mapped"
-    return state
+    return {"existing_content_mappings": [], "current_step": "content_mapped"}

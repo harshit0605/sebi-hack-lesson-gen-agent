@@ -10,7 +10,11 @@ import logging
 
 
 async def load_existing_content(state: LessonCreationState) -> LessonCreationState:
-    """Load existing journeys, lessons, and anchors for context"""
+    """Load existing journeys, lessons, and anchors for context.
+
+    Returns only updated keys: `existing_journeys`, `existing_journeys_list`,
+    `processing_history`, `current_step` and appends to `validation_errors` on failure.
+    """
 
     try:
         # Load from MongoDB with error handling
@@ -48,8 +52,13 @@ async def load_existing_content(state: LessonCreationState) -> LessonCreationSta
                 for journey in existing_journeys_data
             ]
         )
-        state["existing_journeys"] = journeys_summary
-        state["existing_journeys_list"] = existing_journeys_data
+        # Return partial updates
+        return {
+            "existing_journeys": journeys_summary,
+            "existing_journeys_list": existing_journeys_data,
+            "processing_history": {},
+            "current_step": "content_loaded",
+        }
         # state["existing_lessons"] = [
         #     LessonModel(**lesson) for lesson in existing_lessons_data
         # ]
@@ -57,30 +66,16 @@ async def load_existing_content(state: LessonCreationState) -> LessonCreationSta
         #     AnchorModel(**anchor) for anchor in existing_anchors_data
         # ]
         # state["processing_history"] = processing_history
-        state["processing_history"] = {}
-
-        # Log loading statistics
-        # logging.info(f"""
-        # Existing content loaded successfully:
-        # - Journeys: {len(state["existing_journeys"])}
-        # - Lessons: {len(state["existing_lessons"])}
-        # - Anchors: {len(state["existing_anchors"])}
-        # # - Processing history: {len(processing_history.get("chunks_processed", []))} chunks
-        # """)
-
-        state["current_step"] = "content_loaded"
-
     except Exception as e:
-        # raise
         error_msg = f"Failed to load existing content: {str(e)}"
         logging.error(error_msg)
-        state["validation_errors"].append(error_msg)
 
-        # Initialize with empty collections on failure
-        state["existing_journeys"] = []
-        state["existing_lessons"] = []
-        state["existing_anchors"] = []
-        state["processing_history"] = {}
-        state["current_step"] = "content_load_failed"
-
-    return state
+        # Return partial failure state
+        return {
+            "validation_errors": state.get("validation_errors", []) + [error_msg],
+            "existing_journeys": [],
+            "existing_lessons": [],
+            "existing_anchors": [],
+            "processing_history": {},
+            "current_step": "content_load_failed",
+        }

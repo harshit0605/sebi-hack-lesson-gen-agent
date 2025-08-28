@@ -6,7 +6,7 @@ with a single, efficient lesson generation process.
 """
 
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 from langgraph.types import Send
 
 from agents.graphs.content_generation.state import LessonCreationState
@@ -43,40 +43,52 @@ async def generate_complete_lessons(state: LessonCreationState) -> LessonCreatio
 
     try:
         # Step 1: Execute integration strategy or prepare distributions
-        lessons_metadata = await execute_integration_strategy(state)
+        lessons_metadata, strat_updates = await execute_integration_strategy(state)
+
+        updates: Dict[str, Any] = {}
 
         # If we are in CREATE_NEW flow, we only prepared distributions; metadata will be created via fan-out
-        if state.get("lesson_distributions_for_creation"):
+        dists = strat_updates.get("lesson_distributions_for_creation") or state.get("lesson_distributions_for_creation")
+        if dists:
             logging.info(
-                f"Prepared {len(state['lesson_distributions_for_creation'])} lesson distributions for metadata fan-out"
+                f"Prepared {len(dists)} lesson distributions for metadata fan-out"
             )
+            # Include distributions to persist this update in merged state
+            updates["lesson_distributions_for_creation"] = dists
         else:
             # Non CREATE_NEW flows should have lessons collected already
             if not lessons_metadata:
-                state["validation_errors"].append(
+                logging.warning("No lessons generated from integration strategy")
+                updates["validation_errors"] = state.get("validation_errors", []) + [
                     "No lessons generated from integration strategy"
-                )
-                state["lessons_for_content_generation"] = []
+                ]
+                updates["lessons_for_content_generation"] = []
             else:
-                state["lessons_for_content_generation"] = lessons_metadata
+                updates["lessons_for_content_generation"] = lessons_metadata
                 logging.info(
                     f"Prepared {len(lessons_metadata)} lessons for parallel content generation"
                 )
+
         print(
             "lessons_for_content_generation length",
-            len(state.get("lessons_for_content_generation", [])),
+            len(updates.get("lessons_for_content_generation", state.get("lessons_for_content_generation", []))),
         )
-        return state
+        # Merge any additional strategy-produced partial updates (non-destructive)
+        if strat_updates:
+            updates.update(strat_updates)
+
+        return updates
 
     except Exception as e:
         error_msg = f"Failed to prepare lesson generation: {str(e)}"
-        state["validation_errors"].append(error_msg)
         logging.error(error_msg)
-        state["lessons_for_content_generation"] = []
-        return state
+        return {
+            "validation_errors": state.get("validation_errors", []) + [error_msg],
+            "lessons_for_content_generation": [],
+        }
 
 
-async def execute_integration_strategy(state: LessonCreationState) -> List[LessonModel]:
+async def execute_integration_strategy(state: LessonCreationState) -> Tuple[List[LessonModel], Dict[str, Any]]:
     """
     Execute the appropriate integration strategy and return lesson metadata.
 
@@ -85,6 +97,7 @@ async def execute_integration_strategy(state: LessonCreationState) -> List[Lesso
     """
 
     integration_plan = state["integration_plan"]
+    partial_updates: Dict[str, Any] = {}
 
     try:
         if integration_plan.action == ContentIntegrationAction.CREATE_NEW_LESSON:
@@ -94,14 +107,12 @@ async def execute_integration_strategy(state: LessonCreationState) -> List[Lesso
                 for dist in integration_plan.content_distribution
                 if dist.integration_type == "new_lesson"
             ]
-            state["lesson_distributions_for_creation"] = new_lesson_distributions
-            # Ensure legacy fields are not carried over
-            state.pop("new_lessons", None)
-            state.pop("updated_lessons", None)
+            # Return distributions via partial updates instead of mutating state
+            partial_updates["lesson_distributions_for_creation"] = new_lesson_distributions
             logging.info(
                 f"Prepared {len(new_lesson_distributions)} distributions for create-new metadata generation"
             )
-            return []
+            return [], partial_updates
         elif integration_plan.action == ContentIntegrationAction.EXTEND_EXISTING_LESSON:
             await extend_existing_lessons(state)
         elif integration_plan.action == ContentIntegrationAction.MERGE_WITH_EXISTING:
@@ -115,10 +126,8 @@ async def execute_integration_strategy(state: LessonCreationState) -> List[Lesso
         lessons = state.get("new_lessons", []) + state.get("updated_lessons", [])
 
         logging.info(f"Integration strategy executed: {integration_plan.action.value}")
-        state.pop("new_lessons", None)
-        state.pop("updated_lessons", None)
-
-        return lessons
+        # Do not mutate state here; return lessons only
+        return lessons, partial_updates
 
     except Exception as e:
         error_msg = f"Failed to execute integration strategy: {str(e)}"
@@ -179,20 +188,17 @@ async def collect_lesson_metadata(state: LessonCreationState) -> LessonCreationS
     results = state.get("lesson_metadata_results", [])
 
     if results:
-        state["lessons_for_content_generation"] = results
         logging.info(
             f"Collected {len(results)} lesson metadata items for content generation"
         )
-    else:
-        # Non CREATE_NEW flows might have populated lessons_for_content_generation already
-        if not state.get("lessons_for_content_generation"):
-            state["lessons_for_content_generation"] = []
+        return {"lessons_for_content_generation": results}
 
-    # Clean up temporary keys
-    state.pop("lesson_metadata_results", None)
-    state.pop("lesson_distributions_for_creation", None)
+    # Non CREATE_NEW flows might have populated lessons_for_content_generation already
+    if not state.get("lessons_for_content_generation"):
+        return {"lessons_for_content_generation": []}
 
-    return state
+    # No changes
+    return {}
 
 async def validate_complete_lessons(
     lessons: List[LessonModel],
@@ -287,25 +293,29 @@ async def collect_lesson_results(state: LessonCreationState) -> LessonCreationSt
     This is the reduce step in the map-reduce pattern.
     """
 
-    all_lessons = []
-    all_blocks = []
-    all_anchors = []
-    all_voice_scripts = []
+    all_lessons: List[LessonModel] = []
+    all_blocks: List[ContentBlockModel] = []
+    all_anchors: List[AnchorModel] = []
+    all_voice_scripts: List[VoiceScriptModel] = []
 
     try:
         # Get results from parallel execution
         lesson_results = state.get("lesson_content_results", [])
 
         if not lesson_results:
-            state["validation_errors"].append(
-                "No lesson content results found from parallel execution"
-            )
-            return state
+            return {
+                "validation_errors": state.get("validation_errors", [])
+                + ["No lesson content results found from parallel execution"],
+            }
 
         # Process each lesson result
+        aggregated_errors = list(state.get("validation_errors", []))
         for result in lesson_results:
             if "error" in result:
-                state["validation_errors"].append(result["error"])
+                # accumulate error, will return merged errors later
+                aggregated_errors.append(result["error"])
+                # continue collecting other results; errors will be returned below
+                # Note: we don't update updates dict per iteration to avoid duplicates
                 continue
 
             # Extract content from successful results
@@ -324,27 +334,23 @@ async def collect_lesson_results(state: LessonCreationState) -> LessonCreationSt
 
         # Step 3: Validate and store aggregated results
         if all_lessons:
-            # Store complete lessons and content
-            state["lessons"] = all_lessons
-            state["content_blocks"] = all_blocks
-            state["anchors"] = all_anchors
-            state["voice_scripts"] = all_voice_scripts
-
-            # Update state tracking
-            state["current_step"] = "lessons_generated"
-
-            # Clear old partial lesson fields
-            state.pop("new_lessons", None)
-            state.pop("updated_lessons", None)
-            state.pop("lesson_content_results", None)
-
             # Validate complete lessons
             validation_result = await validate_complete_lessons(
                 all_lessons, all_blocks, all_anchors, all_voice_scripts
             )
 
+            updates: Dict[str, Any] = {
+                "lessons": all_lessons,
+                "content_blocks": all_blocks,
+                "anchors": all_anchors,
+                "voice_scripts": all_voice_scripts,
+                "current_step": "lessons_generated",
+            }
+
             if not validation_result["valid"]:
-                state["validation_errors"].extend(validation_result["errors"])
+                updates["validation_errors"] = aggregated_errors + validation_result["errors"]
+            elif aggregated_errors:
+                updates["validation_errors"] = aggregated_errors
 
             # Generate statistics
             stats = get_lesson_generation_stats(
@@ -356,17 +362,17 @@ async def collect_lesson_results(state: LessonCreationState) -> LessonCreationSt
                 f"{len(all_blocks)} blocks, {len(all_anchors)} anchors, "
                 f"{len(all_voice_scripts)} voice scripts. Stats: {stats}"
             )
+            return updates
         else:
-            state["validation_errors"].append(
-                "No complete lessons were collected from parallel execution"
-            )
+            return {
+                "validation_errors": aggregated_errors
+                + ["No complete lessons were collected from parallel execution"],
+            }
 
     except Exception as e:
         error_msg = f"Failed to collect lesson results: {str(e)}"
-        state["validation_errors"].append(error_msg)
         logging.error(error_msg)
-
-    return state
+        return {"validation_errors": state.get("validation_errors", []) + [error_msg]}
 
 
 def get_lesson_generation_stats(

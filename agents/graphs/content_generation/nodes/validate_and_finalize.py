@@ -40,9 +40,7 @@ async def validate_and_finalize(state: LessonCreationState) -> LessonCreationSta
     except Exception as e:
         validation_errors.append(f"Pydantic validation error: {str(e)}")
 
-    state["validation_errors"] = validation_errors
-    state["current_step"] = "validated"
-    return state
+    return {"validation_errors": validation_errors, "current_step": "validated"}
 
 
 def validation_gate(
@@ -56,10 +54,10 @@ def validation_gate(
     if errors:
         retry_count = state.get("retry_count", 0)
         if retry_count < 2:
-            state["retry_count"] = retry_count + 1
+            # Do not mutate state here; increment handled in error node
             return "has_errors"
         else:
-            state["requires_human_review"] = True
+            # Do not mutate state here; request handled in human review node
             return "needs_review"
 
     return "valid"

@@ -10,10 +10,15 @@ from typing import Literal
 
 
 async def evaluate_journey_fit(state: LessonCreationState) -> LessonCreationState:
-    """Evaluate if new content fits existing journeys or needs a new one"""
+    """Evaluate if new content fits existing journeys or needs a new one.
+
+    Returns only: `journey_creation_plan` (if created) and `current_step`.
+    """
 
     integration_plan = state["integration_plan"]
     existing_journeys = state["existing_journeys"]
+
+    updates: LessonCreationState = {}
 
     if integration_plan.new_journey_needed:
         journey_prompt = EVALUATE_JOURNEY_FIT_PROMPTS["journey_creation_planning"]
@@ -29,10 +34,10 @@ async def evaluate_journey_fit(state: LessonCreationState) -> LessonCreationStat
         journey_plan = await lesson_creator_llm.ainvoke_with_structured_output(
             messages, JourneyCreationPlan
         )
-        state["journey_creation_plan"] = journey_plan
+        updates["journey_creation_plan"] = journey_plan
 
-    state["current_step"] = "journey_evaluated"
-    return state
+    updates["current_step"] = "journey_evaluated"
+    return updates
 
 
 def journey_decision_gate(

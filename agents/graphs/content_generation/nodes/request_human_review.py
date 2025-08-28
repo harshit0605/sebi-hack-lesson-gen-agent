@@ -32,16 +32,16 @@ async def request_human_review(state: LessonCreationState) -> LessonCreationStat
     # Store review record for human reviewer
     await store_review_record(review_record)
 
-    # Set state for human review
-    state["requires_human_review"] = True
-    state["review_record"] = review_record
-    state["current_step"] = "awaiting_human_review"
-
     logging.info(
         f"Content queued for human review - Priority: {review_record['priority']}, Session: {state['session_id']}"
     )
 
-    return state
+    # Return partial state update only
+    return {
+        "requires_human_review": True,
+        "review_record": review_record,
+        "current_step": "awaiting_human_review",
+    }
 
 
 async def compile_review_context(state: LessonCreationState) -> Dict[str, Any]:

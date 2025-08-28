@@ -4,7 +4,6 @@ Node for persisting generated content to MongoDB database
 
 import logging
 from typing import Dict
-from langgraph.types import Command
 from agents.graphs.content_generation.state import LessonCreationState
 
 from agents.graphs.content_generation.db.persist_content import (
@@ -177,7 +176,7 @@ async def persist_to_database_node(state: LessonCreationState) -> LessonCreation
         state: LessonCreationState containing generated content
 
     Returns:
-        Command routing to next step or completion
+        Partial state update with keys it modifies only
     """
 
     try:
@@ -187,16 +186,18 @@ async def persist_to_database_node(state: LessonCreationState) -> LessonCreation
         if not state["content_blocks"]:
             error_msg = "No content blocks to persist"
             logging.error(error_msg)
-            state["validation_errors"] = state["validation_errors"] + [error_msg]
-            state["current_step"] = "persist_failed"
-            return state
+            return {
+                "validation_errors": state.get("validation_errors", []) + [error_msg],
+                "current_step": "persist_failed",
+            }
 
         if not state["lessons"]:
             error_msg = "No lessons to persist"
             logging.error(error_msg)
-            state["validation_errors"] = state["validation_errors"] + [error_msg]
-            state["current_step"] = "persist_failed"
-            return state
+            return {
+                "validation_errors": state.get("validation_errors", []) + [error_msg],
+                "current_step": "persist_failed",
+            }
 
         # Convert Pydantic models to dicts for MongoDB
         new_journeys_dict = []
@@ -229,46 +230,23 @@ async def persist_to_database_node(state: LessonCreationState) -> LessonCreation
         if not persistence_result["success"]:
             error_msg = f"Database persistence failed: {persistence_result.get('error', 'Unknown error')}"
             logging.error(error_msg)
-
-            state["validation_errors"] = state["validation_errors"] + [error_msg]
-            state["current_step"] = "persist_failed"
-            # state["processing_history"]["persistence_attempt"] = {
-            #     "success": False,
-            #     "errors": persistence_result.get("errors", []),
-            #     "partial_results": persistence_result.get("created_ids", {}),
-            # }
-            return state
+            return {
+                "validation_errors": state.get("validation_errors", []) + [error_msg],
+                "current_step": "persist_failed",
+            }
 
         # Success - update state with persistence results
         logging.info("Successfully persisted content to database")
         logging.info(f"Created IDs: {persistence_result['created_ids']}")
-
-        state["current_step"] = "content_persisted"
-        # state["processing_history"]["persistence_result"] = {
-        #     "success": True,
-        #     "created_ids": persistence_result["created_ids"],
-        #     "summary": {
-        #         "journeys_created": len(persistence_result["created_ids"]["journeys"]),
-        #         "lessons_created": len(persistence_result["created_ids"]["lessons"]),
-        #         "content_blocks_created": len(
-        #             persistence_result["created_ids"]["content_blocks"]
-        #         ),
-        #         "anchors_created": len(persistence_result["created_ids"]["anchors"]),
-        #     },
-        # }
-        return state
+        return {"current_step": "content_persisted"}
 
     except Exception as e:
         error_msg = f"Critical error in persist_to_database_node: {str(e)}"
         logging.error(error_msg, exc_info=True)
-
-        state["validation_errors"] = state["validation_errors"] + [error_msg]
-        state["current_step"] = "persist_failed"
-        # state["processing_history"]["persistence_error"] = {
-        #     "error": error_msg,
-        #     "step": "persist_to_database_node",
-        # }
-        return state
+        return {
+            "validation_errors": state.get("validation_errors", []) + [error_msg],
+            "current_step": "persist_failed",
+        }
 
 
 def create_persistence_summary(created_ids: Dict[str, list]) -> str:

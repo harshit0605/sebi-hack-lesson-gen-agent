@@ -8,7 +8,11 @@ import logging
 
 
 async def analyze_new_content(state: LessonCreationState) -> LessonCreationState:
-    """Analyze new PDF content chunk to extract key concepts and learning opportunities"""
+    """Analyze new PDF content chunk to extract key concepts and learning opportunities.
+
+    Returns only the keys it updates: `content_analysis`, `current_step`, and
+    appends to `validation_errors` on failure.
+    """
 
     pdf_content = state.get("pdf_content", "")
     page_numbers = state.get("page_numbers", [])
@@ -30,18 +34,22 @@ async def analyze_new_content(state: LessonCreationState) -> LessonCreationState
         # Enhance analysis with additional processing
         content_analysis = await enhance_content_analysis(content_analysis, pdf_content)
 
-        state["content_analysis"] = content_analysis
-        state["current_step"] = "content_analyzed"
-
         logging.info(
             f"Content analysis completed for chunk {chunk_id}: {len(content_analysis.key_concepts)} concepts identified"
         )
 
-    except Exception as e:
-        state["validation_errors"].append(f"Content analysis failed: {str(e)}")
-        logging.error(f"Content analysis error for chunk {chunk_id}: {str(e)}")
+        # Return partial state with only modified keys
+        return {
+            "content_analysis": content_analysis,
+            "current_step": "content_analyzed",
+        }
 
-    return state
+    except Exception as e:
+        error_msg = f"Content analysis failed: {str(e)}"
+        logging.error(f"Content analysis error for chunk {chunk_id}: {str(e)}")
+        return {
+            "validation_errors": state.get("validation_errors", []) + [error_msg]
+        }
 
 
 async def enhance_content_analysis(

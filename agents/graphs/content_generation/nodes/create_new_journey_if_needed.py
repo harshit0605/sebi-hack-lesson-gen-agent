@@ -14,8 +14,7 @@ async def create_new_journey_if_needed(
 
     journey_plan = state.get("journey_creation_plan")
     if not journey_plan:
-        state["current_step"] = "no_journey_creation_needed"
-        return state
+        return {"current_step": "no_journey_creation_needed"}
 
     try:
         # Generate journey slug from title
@@ -47,28 +46,35 @@ async def create_new_journey_if_needed(
         # Validate the journey model
         new_journey.model_validate(new_journey.model_dump())
 
-        # Add to state
-        if "new_journeys" not in state:
-            state["new_journeys"] = []
-        state["new_journeys"].append(new_journey)
+        # Prepare partial updates
+        updates: LessonCreationState = {
+            "new_journeys": state.get("new_journeys", []) + [new_journey],
+            "current_step": "new_journey_created",
+        }
 
-        # Update integration plan to use the new journey
-        if state["integration_plan"]:
-            state["integration_plan"].new_journey_needed = True
-            state[
-                "integration_plan"
-            ].rationale += f" Created new journey: {new_journey.title}"
-
-        state["current_step"] = "new_journey_created"
+        # Update integration plan to use the new journey (copy to avoid in-place mutation)
+        if state.get("integration_plan"):
+            try:
+                plan_copy = state["integration_plan"].model_copy(deep=True)
+            except Exception:
+                # Fallback to using the original if deep copy unsupported
+                plan_copy = state["integration_plan"]
+            plan_copy.new_journey_needed = True
+            plan_copy.rationale = (plan_copy.rationale or "") + (
+                f" Created new journey: {new_journey.title}"
+            )
+            updates["integration_plan"] = plan_copy
 
         logging.info(f"New journey created: {new_journey.title} ({new_journey.slug})")
+        return updates
 
     except Exception as e:
         error_msg = f"Failed to create new journey: {str(e)}"
-        state["validation_errors"].append(error_msg)
         logging.error(error_msg)
-
-    return state
+        return {
+            "validation_errors": state.get("validation_errors", []) + [error_msg],
+            "current_step": "journey_creation_failed",
+        }
 
 
 # Removed generate_learning_outcomes_from_structure function

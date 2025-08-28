@@ -9,7 +9,10 @@ from agents.graphs.content_generation.prompts.create_integration_plan import (
 
 
 async def create_integration_plan(state: LessonCreationState) -> LessonCreationState:
-    """Create a detailed plan for integrating new content with existing content"""
+    """Create a detailed plan for integrating new content with existing content.
+
+    Returns only: `integration_plan`, `current_step`.
+    """
 
     content_analysis = state.get("content_analysis", {})
     mappings = state.get("existing_content_mappings", [])
@@ -37,6 +40,4 @@ async def create_integration_plan(state: LessonCreationState) -> LessonCreationS
         messages, ContentIntegrationPlan
     )
 
-    state["integration_plan"] = integration_plan
-    state["current_step"] = "integration_planned"
-    return state
+    return {"integration_plan": integration_plan, "current_step": "integration_planned"}
