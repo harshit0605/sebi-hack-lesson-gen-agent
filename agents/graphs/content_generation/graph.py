@@ -21,6 +21,9 @@ from agents.graphs.content_generation.nodes import (
 # Import corrected parallel lesson generation nodes
 from agents.graphs.content_generation.nodes.generate_complete_lessons import (
     generate_complete_lessons,
+    continue_to_lesson_metadata_generation,
+    create_lesson_metadata_node,
+    collect_lesson_metadata,
     continue_to_lesson_content_generation,
     collect_lesson_results,
 )
@@ -51,6 +54,8 @@ def create_enhanced_lesson_creation_graph():
 
     # Parallel lesson content generation nodes
     workflow.add_node("generate_complete_lessons", generate_complete_lessons)
+    workflow.add_node("create_lesson_metadata_node", create_lesson_metadata_node)
+    workflow.add_node("collect_lesson_metadata", collect_lesson_metadata)
     workflow.add_node("generate_lesson_content_node", generate_lesson_content_node)
     workflow.add_node("collect_lesson_results", collect_lesson_results)
 
@@ -81,17 +86,30 @@ def create_enhanced_lesson_creation_graph():
 
     workflow.add_edge("create_new_journey", "generate_complete_lessons")
 
-    # CRITICAL: Use conditional edge for parallel lesson content generation
-    # When using Send API, the conditional edge should only specify the target nodes
+    # First: fan-out metadata generation (for CREATE_NEW) or skip to collector
     workflow.add_conditional_edges(
         "generate_complete_lessons",
-        continue_to_lesson_content_generation,
+        continue_to_lesson_metadata_generation,
         {
-            "generate_lesson_content_node": "generate_lesson_content_node",
+            "create_lesson_metadata_node": "create_lesson_metadata_node",
+            "collect_lesson_metadata": "collect_lesson_metadata",
         },
     )
 
-    # Edge from parallel nodes to collection
+    # Edge from metadata nodes to metadata collector
+    workflow.add_edge("create_lesson_metadata_node", "collect_lesson_metadata")
+
+    # Then: fan-out content generation based on collected lesson metadata
+    workflow.add_conditional_edges(
+        "collect_lesson_metadata",
+        continue_to_lesson_content_generation,
+        {
+            "generate_lesson_content_node": "generate_lesson_content_node",
+            "collect_lesson_results": "collect_lesson_results",
+        },
+    )
+
+    # Edge from parallel content nodes to collection
     workflow.add_edge("generate_lesson_content_node", "collect_lesson_results")
     workflow.add_edge("collect_lesson_results", "persist_to_database")
     workflow.add_edge("persist_to_database", "validate_and_finalize")

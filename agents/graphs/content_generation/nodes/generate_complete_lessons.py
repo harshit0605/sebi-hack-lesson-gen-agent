@@ -21,10 +21,12 @@ from agents.graphs.content_generation.models import (
 
 # Import strategy implementations
 from agents.graphs.content_generation.nodes.strategies import (
-    create_new_lessons,
     extend_existing_lessons,
     merge_with_existing_lessons,
     split_into_multiple_lessons,
+)
+from agents.graphs.content_generation.nodes.strategies.create_new_lesson import (
+    create_lesson_from_distribution,
 )
 
 
@@ -34,25 +36,32 @@ async def generate_complete_lessons(state: LessonCreationState) -> LessonCreatio
 
     This function:
     1. Executes the appropriate integration strategy
-    2. Stores lesson metadata in state for conditional edge processing
-    3. Returns updated state
+    2. For CREATE_NEW, prepares distributions for metadata fan-out
+    3. Stores lesson metadata in state for conditional edge processing (non CREATE_NEW)
+    4. Returns updated state
     """
 
     try:
-        # Step 1: Execute integration strategy to create lesson metadata
+        # Step 1: Execute integration strategy or prepare distributions
         lessons_metadata = await execute_integration_strategy(state)
 
-        if not lessons_metadata:
-            state["validation_errors"].append(
-                "No lessons generated from integration strategy"
-            )
-            state["lessons_for_content_generation"] = []
-        else:
-            # Store lessons metadata for conditional edge processing
-            state["lessons_for_content_generation"] = lessons_metadata
+        # If we are in CREATE_NEW flow, we only prepared distributions; metadata will be created via fan-out
+        if state.get("lesson_distributions_for_creation"):
             logging.info(
-                f"Prepared {len(lessons_metadata)} lessons for parallel content generation"
+                f"Prepared {len(state['lesson_distributions_for_creation'])} lesson distributions for metadata fan-out"
             )
+        else:
+            # Non CREATE_NEW flows should have lessons collected already
+            if not lessons_metadata:
+                state["validation_errors"].append(
+                    "No lessons generated from integration strategy"
+                )
+                state["lessons_for_content_generation"] = []
+            else:
+                state["lessons_for_content_generation"] = lessons_metadata
+                logging.info(
+                    f"Prepared {len(lessons_metadata)} lessons for parallel content generation"
+                )
         print(
             "lessons_for_content_generation length",
             len(state.get("lessons_for_content_generation", [])),
@@ -79,7 +88,20 @@ async def execute_integration_strategy(state: LessonCreationState) -> List[Lesso
 
     try:
         if integration_plan.action == ContentIntegrationAction.CREATE_NEW_LESSON:
-            await create_new_lessons(state)
+            # For create-new, do not create metadata serially; prepare distributions for fan-out
+            new_lesson_distributions = [
+                dist
+                for dist in integration_plan.content_distribution
+                if dist.integration_type == "new_lesson"
+            ]
+            state["lesson_distributions_for_creation"] = new_lesson_distributions
+            # Ensure legacy fields are not carried over
+            state.pop("new_lessons", None)
+            state.pop("updated_lessons", None)
+            logging.info(
+                f"Prepared {len(new_lesson_distributions)} distributions for create-new metadata generation"
+            )
+            return []
         elif integration_plan.action == ContentIntegrationAction.EXTEND_EXISTING_LESSON:
             await extend_existing_lessons(state)
         elif integration_plan.action == ContentIntegrationAction.MERGE_WITH_EXISTING:
@@ -103,6 +125,74 @@ async def execute_integration_strategy(state: LessonCreationState) -> List[Lesso
         logging.error(error_msg)
         raise
 
+
+def continue_to_lesson_metadata_generation(state: LessonCreationState):
+    """
+    Conditional edge that fans out per-distribution lesson metadata creation for CREATE_NEW flow.
+    If no distributions exist, skip directly to metadata collection.
+    """
+    dists = state.get("lesson_distributions_for_creation", [])
+    if not dists:
+        return "collect_lesson_metadata"
+
+    send_cmds = []
+    for dist in dists:
+        logging.info(f"Creating Send for lesson metadata: {getattr(dist, 'lesson_title', 'untitled')}")
+        send_cmds.append(
+            Send(
+                "create_lesson_metadata_node",
+                {**state, "lesson_distribution": dist},
+            )
+        )
+    return send_cmds
+
+
+async def create_lesson_metadata_node(state: LessonCreationState) -> LessonCreationState:
+    """
+    Create a single LessonModel (metadata only) from a LessonContentDistribution.
+    Returns reducer-friendly payload in lesson_metadata_results.
+    """
+    try:
+        dist = state.get("lesson_distribution")
+        if not dist:
+            raise ValueError("lesson_distribution missing in state")
+
+        integration_plan = state["integration_plan"]
+        journey_plan = state.get("journey_creation_plan")
+        existing_journeys = state.get("existing_journeys_list", [])
+
+        lesson = await create_lesson_from_distribution(
+            dist, integration_plan, journey_plan, state, existing_journeys
+        )
+
+        return {"lesson_metadata_results": [lesson]}
+    except Exception as e:
+        logging.error(f"Failed to create lesson metadata: {str(e)}")
+        return {"lesson_metadata_results": []}
+
+
+async def collect_lesson_metadata(state: LessonCreationState) -> LessonCreationState:
+    """
+    Collect metadata results and set lessons_for_content_generation.
+    If results are empty and lessons_for_content_generation already exists (non CREATE_NEW flows), no-op.
+    """
+    results = state.get("lesson_metadata_results", [])
+
+    if results:
+        state["lessons_for_content_generation"] = results
+        logging.info(
+            f"Collected {len(results)} lesson metadata items for content generation"
+        )
+    else:
+        # Non CREATE_NEW flows might have populated lessons_for_content_generation already
+        if not state.get("lessons_for_content_generation"):
+            state["lessons_for_content_generation"] = []
+
+    # Clean up temporary keys
+    state.pop("lesson_metadata_results", None)
+    state.pop("lesson_distributions_for_creation", None)
+
+    return state
 
 async def validate_complete_lessons(
     lessons: List[LessonModel],

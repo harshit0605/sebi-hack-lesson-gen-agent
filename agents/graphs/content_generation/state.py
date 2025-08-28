@@ -10,6 +10,7 @@ from agents.graphs.content_generation.models import (
     JourneyCreationPlan,
     LessonContentBlocks,
     VoiceScriptModel,
+    LessonContentDistribution,
 )
 
 import uuid
@@ -44,9 +45,11 @@ class LessonCreationState(TypedDict):
 
     # Lesson metadata for parallel processing
     lessons_for_content_generation: List[LessonModel]
+    lesson_distributions_for_creation: List[LessonContentDistribution]
 
     # Parallel execution results (with reducer for concurrent updates)
     lesson_content_results: Annotated[List[Dict[str, Any]], operator.add]
+    lesson_metadata_results: Annotated[List[LessonModel], operator.add]
 
     # Legacy fields (deprecated - use 'lessons' instead)
     new_lessons: Optional[List[LessonModel]]  # For backward compatibility

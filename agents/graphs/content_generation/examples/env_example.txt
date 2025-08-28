@@ -1,0 +1,23 @@
+# Environment Variables for Multi-Provider LLM Support
+# Copy this to your .env file and add your API keys
+
+# OpenAI Configuration
+OPENAI_API_KEY=sk-your_openai_api_key_here
+
+# Google Gemini Configuration  
+GOOGLE_API_KEY=AIza_your_google_api_key_here
+
+# Provider Selection (optional - auto-detects if not set)
+# Uncomment to force a specific provider:
+# LLM_PROVIDER=openai
+# LLM_PROVIDER=gemini
+
+# Model Overrides (optional - uses defaults if not set)
+# OPENAI_MODEL_OVERRIDE=gpt-4o
+# GEMINI_MODEL_OVERRIDE=gemini-1.5-pro
+
+# Usage Notes:
+# - If both keys are present, Gemini is preferred by default
+# - If only one key is present, that provider is used
+# - If no keys are present, OpenAI is attempted (will fail without key)
+# - Provider-specific instances can be created explicitly regardless of defaults
