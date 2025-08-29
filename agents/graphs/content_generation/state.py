@@ -16,19 +16,22 @@ from agents.graphs.content_generation.models import (
 import uuid
 
 
-class LessonCreationState(TypedDict):
+class LessonCreationState(TypedDict, total=False):
     # Input
     pdf_content: str
     page_numbers: List[int]
+    # original source context propagated from parent graph
+    source_url: str
+    source_type: str
     session_id: str = f"session_{uuid.uuid4()}"
     chunk_id: str = f"chunk_{uuid.uuid4()}"
 
     # Context from previous processing
     existing_journeys: str
-    existing_journeys_list: List[JourneyModel]
+    existing_journeys_list: List[Dict[str, Any]]
     # existing_lessons: List[LessonModel]
     # existing_anchors: List[AnchorModel]
-    # processing_history: Dict[str, Any]
+    processing_history: Dict[str, Any]
 
     # Analysis results
     content_analysis: ContentAnalysisResult

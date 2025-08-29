@@ -448,7 +448,7 @@ class ContentBlockModel(BaseModel):
     )
     anchor_ids: List[str] = Field(
         default_factory=list,
-        description="SEBI regulatory source references that provide authoritative backing for this content block. Critical for compliance and credibility.",
+        description="SEBI regulatory source references that provide authoritative backing for this content block. Critical for compliance and credibility. Ids should match the short_label of the anchors generated.",
     )
     metadata: ContentBlockMetadata = Field(
         description="Technical metadata about content generation, quality assessment, and integration requirements."
@@ -456,17 +456,22 @@ class ContentBlockModel(BaseModel):
 
 
 class AnchorModel(BaseModel):
+    title: str = Field(
+        description="Brief title of the anchor which can be used for display in UI"
+    )
     short_label: str = Field(
         description="Brief label for quick identification (e.g., 'concept_1', 'regulation_1')"
     )
-    excerpt: str = Field(description="Relevant text excerpt from the source content")
-    source_type: SourceType = Field(
-        description="Type of source document (PDF, circular, etc.)"
+    excerpt: str = Field(
+        description="Relevant text excerpt from the source content. Keep it concise."
     )
+    # source_type: SourceType = Field(
+    #     description="Type of source document (PDF, circular, etc.)"
+    # )
 
-    created_from_chunk: str = Field(
-        description="ID of the document chunk this anchor was extracted from"
-    )
+    # created_from_chunk: str = Field(
+    #     description="ID of the document chunk this anchor was extracted from"
+    # )
 
 
 class ConceptBlock(ContentBlockModel):
@@ -577,7 +582,7 @@ class VoiceScriptModel(BaseModel):
 # Content integration models
 class ContentAnalysisResult(BaseModel):
     key_concepts: List[str] = Field(
-        description="Comprehensive list of key financial concepts extracted from the content. Each concept should be specific, clearly defined, and relevant to Indian investors. Include both basic and advanced concepts with clear explanations."
+        description="Comprehensive list of atmost 30 key financial concepts extracted from the content. Each concept should be specific, clearly defined, and relevant to Indian investors. Include both basic and advanced concepts with clear explanations."
     )
     sebi_themes: List[str] = Field(
         description="Specific SEBI regulatory themes, guidelines, and investor protection measures identified in the content. Reference official SEBI terminology and current regulatory priorities."

@@ -3,6 +3,7 @@
         "."
     ],
     "graphs": {
+        "chunking_orchestrator": "./agents/graphs/chunking_orchestrator/graph.py:orchestrator",
         "enhanced_lesson_creator": "./agents/graphs/content_generation/graph.py:agent"
     },
     "env": ".env"

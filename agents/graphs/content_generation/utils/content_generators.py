@@ -42,6 +42,25 @@ async def generate_complete_lesson_content(
     # Generate content blocks and anchors together in one LLM call
     blocks, anchors = await generate_blocks_for_lesson(lesson, content_analysis, state)
 
+    # Scope anchors to lesson to avoid collisions across parallel lessons
+    # short_label becomes "<lesson.slug>::<short_label>"
+    if anchors:
+        label_map = {a.short_label: f"{lesson.slug}::{a.short_label}" for a in anchors}
+        for a in anchors:
+            a.short_label = label_map[a.short_label]
+
+        # Also update any pre-populated anchor references in quiz items to scoped labels
+        try:
+            for blk in blocks:
+                if blk.type == BlockType.QUIZ and hasattr(blk, "payload") and hasattr(blk.payload, "items"):
+                    for item in blk.payload.items:
+                        existing_ids = getattr(item, "anchor_ids", []) or []
+                        if existing_ids:
+                            item.anchor_ids = [label_map.get(aid, f"{lesson.slug}::{aid}") for aid in existing_ids]
+        except Exception:
+            # Non-fatal; default linking will still provide at least one anchor per block
+            pass
+
     # Ensure each block is linked to at least one anchor at block level
     blocks = await link_blocks_to_anchors(blocks, anchors)
 
@@ -89,9 +108,7 @@ async def generate_blocks_for_lesson(
         learning_opportunities=content_analysis.learning_opportunities,
         journey_context=journey_context,
         integration_rationale=integration_plan.rationale if integration_plan else "",
-        page_numbers=state.get("page_numbers", []),
         pdf_content=state.get("pdf_content", ""),
-        chunk_id=state.get("chunk_id", ""),
     )
 
     # Single LLM call to generate all content blocks
@@ -250,7 +267,11 @@ async def link_blocks_to_anchors(
     for i, block in enumerate(blocks):
         # Aggregate quiz item anchors if present
         try:
-            if block.type == BlockType.QUIZ and hasattr(block, "payload") and hasattr(block.payload, "items"):
+            if (
+                block.type == BlockType.QUIZ
+                and hasattr(block, "payload")
+                and hasattr(block.payload, "items")
+            ):
                 aggregated: List[str] = []
                 for item in block.payload.items:
                     for aid in getattr(item, "anchor_ids", []) or []:

@@ -2,7 +2,11 @@
 Prompts for structured content generation node.
 """
 
-from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
+from langchain_core.prompts import (
+    ChatPromptTemplate,
+    SystemMessagePromptTemplate,
+    HumanMessagePromptTemplate,
+)
 
 GENERATE_STRUCTURED_CONTENT_SYSTEM_MESSAGE = """You are an expert educational content creator specializing in SEBI investor education materials. Generate clear, engaging, and pedagogically effective content that helps Indian investors understand complex financial concepts.
 
@@ -14,9 +18,12 @@ Focus on creating content that is:
 - Actionable for practical investor decision-making"""
 
 GENERATE_STRUCTURED_CONTENT_PROMPTS = {
-    "concept_blocks": ChatPromptTemplate.from_messages([
-        SystemMessagePromptTemplate.from_template(GENERATE_STRUCTURED_CONTENT_SYSTEM_MESSAGE),
-        HumanMessagePromptTemplate.from_template("""
+    "concept_blocks": ChatPromptTemplate.from_messages(
+        [
+            SystemMessagePromptTemplate.from_template(
+                GENERATE_STRUCTURED_CONTENT_SYSTEM_MESSAGE
+            ),
+            HumanMessagePromptTemplate.from_template("""
         Generate concept blocks for this lesson using the enhanced content analysis.
         
         Lesson: {lesson_title}
@@ -40,12 +47,15 @@ GENERATE_STRUCTURED_CONTENT_PROMPTS = {
         4. Have proper payload structure for the concept block type
         5. Build on the integration rationale and journey context
         
-        """)
-    ]),
-    
-    "concept_anchors": ChatPromptTemplate.from_messages([
-        SystemMessagePromptTemplate.from_template(GENERATE_STRUCTURED_CONTENT_SYSTEM_MESSAGE),
-        HumanMessagePromptTemplate.from_template("""
+        """),
+        ]
+    ),
+    "concept_anchors": ChatPromptTemplate.from_messages(
+        [
+            SystemMessagePromptTemplate.from_template(
+                GENERATE_STRUCTURED_CONTENT_SYSTEM_MESSAGE
+            ),
+            HumanMessagePromptTemplate.from_template("""
         Create SEBI concept anchors for the key learning concepts in this lesson.
         
         Lesson Title: {lesson_title}
@@ -75,12 +85,15 @@ GENERATE_STRUCTURED_CONTENT_PROMPTS = {
         
         Focus on concepts that directly support the learning objectives and leverage identified SEBI themes.
         
-        """)
-    ]),
-    
-    "guideline_anchors": ChatPromptTemplate.from_messages([
-        SystemMessagePromptTemplate.from_template(GENERATE_STRUCTURED_CONTENT_SYSTEM_MESSAGE),
-        HumanMessagePromptTemplate.from_template("""
+        """),
+        ]
+    ),
+    "guideline_anchors": ChatPromptTemplate.from_messages(
+        [
+            SystemMessagePromptTemplate.from_template(
+                GENERATE_STRUCTURED_CONTENT_SYSTEM_MESSAGE
+            ),
+            HumanMessagePromptTemplate.from_template("""
         Create SEBI guideline anchors from regulatory content in this lesson.
         
         Lesson: {lesson_title}
@@ -109,12 +122,15 @@ GENERATE_STRUCTURED_CONTENT_PROMPTS = {
         
         Prioritize content that helps investors understand their rights and obligations within the lesson context.
         
-        """)
-    ]),
-    
-    "framework_anchors": ChatPromptTemplate.from_messages([
-        SystemMessagePromptTemplate.from_template(GENERATE_STRUCTURED_CONTENT_SYSTEM_MESSAGE),
-        HumanMessagePromptTemplate.from_template("""
+        """),
+        ]
+    ),
+    "framework_anchors": ChatPromptTemplate.from_messages(
+        [
+            SystemMessagePromptTemplate.from_template(
+                GENERATE_STRUCTURED_CONTENT_SYSTEM_MESSAGE
+            ),
+            HumanMessagePromptTemplate.from_template("""
         Create anchors for regulatory frameworks and structural information.
         
         Lesson Context: {lesson_title}
@@ -143,12 +159,15 @@ GENERATE_STRUCTURED_CONTENT_PROMPTS = {
         
         Focus on content that explains "how things work" in the regulatory environment while supporting lesson objectives.
         
-        """)
-    ]),
-    
-    "example_anchors": ChatPromptTemplate.from_messages([
-        SystemMessagePromptTemplate.from_template(GENERATE_STRUCTURED_CONTENT_SYSTEM_MESSAGE),
-        HumanMessagePromptTemplate.from_template("""
+        """),
+        ]
+    ),
+    "example_anchors": ChatPromptTemplate.from_messages(
+        [
+            SystemMessagePromptTemplate.from_template(
+                GENERATE_STRUCTURED_CONTENT_SYSTEM_MESSAGE
+            ),
+            HumanMessagePromptTemplate.from_template("""
         Create anchors for practical examples and case studies from SEBI content.
         
         Lesson: {lesson_title}
@@ -177,12 +196,15 @@ GENERATE_STRUCTURED_CONTENT_PROMPTS = {
         
         Focus on content that helps learners apply theoretical knowledge practically within the lesson context.
         
-        """)
-    ]),
-    
-    "example_blocks": ChatPromptTemplate.from_messages([
-        SystemMessagePromptTemplate.from_template(GENERATE_STRUCTURED_CONTENT_SYSTEM_MESSAGE),
-        HumanMessagePromptTemplate.from_template("""
+        """),
+        ]
+    ),
+    "example_blocks": ChatPromptTemplate.from_messages(
+        [
+            SystemMessagePromptTemplate.from_template(
+                GENERATE_STRUCTURED_CONTENT_SYSTEM_MESSAGE
+            ),
+            HumanMessagePromptTemplate.from_template("""
         Generate example blocks for this lesson using practical Indian market scenarios.
         
         Lesson: {lesson_title}
@@ -207,12 +229,15 @@ GENERATE_STRUCTURED_CONTENT_PROMPTS = {
         4. Show practical applications aligned with learning opportunities
         5. Use familiar Indian financial instruments and situations
         
-        """)
-    ]),
-    
-    "quiz_blocks": ChatPromptTemplate.from_messages([
-        SystemMessagePromptTemplate.from_template(GENERATE_STRUCTURED_CONTENT_SYSTEM_MESSAGE),
-        HumanMessagePromptTemplate.from_template("""
+        """),
+        ]
+    ),
+    "quiz_blocks": ChatPromptTemplate.from_messages(
+        [
+            SystemMessagePromptTemplate.from_template(
+                GENERATE_STRUCTURED_CONTENT_SYSTEM_MESSAGE
+            ),
+            HumanMessagePromptTemplate.from_template("""
         Generate quiz blocks to assess understanding of this lesson.
         
         Lesson: {lesson_title}
@@ -237,12 +262,15 @@ GENERATE_STRUCTURED_CONTENT_PROMPTS = {
         4. Use multiple choice and practical application questions
         5. Align with learning objectives and opportunities identified
         
-        """)
-    ]),
-    
-    "reflection_blocks": ChatPromptTemplate.from_messages([
-        SystemMessagePromptTemplate.from_template(GENERATE_STRUCTURED_CONTENT_SYSTEM_MESSAGE),
-        HumanMessagePromptTemplate.from_template("""
+        """),
+        ]
+    ),
+    "reflection_blocks": ChatPromptTemplate.from_messages(
+        [
+            SystemMessagePromptTemplate.from_template(
+                GENERATE_STRUCTURED_CONTENT_SYSTEM_MESSAGE
+            ),
+            HumanMessagePromptTemplate.from_template("""
         Generate reflection blocks to encourage critical thinking about this lesson.
         
         Lesson: {lesson_title}
@@ -267,12 +295,15 @@ GENERATE_STRUCTURED_CONTENT_PROMPTS = {
         4. Include self-assessment questions aligned with learning opportunities
         5. Foster critical thinking about investor protection and compliance
         
-        """)
-    ]),
-    
-    "interactive_blocks": ChatPromptTemplate.from_messages([
-        SystemMessagePromptTemplate.from_template(GENERATE_STRUCTURED_CONTENT_SYSTEM_MESSAGE),
-        HumanMessagePromptTemplate.from_template("""
+        """),
+        ]
+    ),
+    "interactive_blocks": ChatPromptTemplate.from_messages(
+        [
+            SystemMessagePromptTemplate.from_template(
+                GENERATE_STRUCTURED_CONTENT_SYSTEM_MESSAGE
+            ),
+            HumanMessagePromptTemplate.from_template("""
         Generate interactive blocks for hands-on learning in this lesson.
         
         Lesson: {lesson_title}
@@ -297,12 +328,15 @@ GENERATE_STRUCTURED_CONTENT_PROMPTS = {
         4. Create interactive checklists for investor protection measures
         5. Enable hands-on practice of key concepts from learning opportunities
         
-        """)
-    ]),
-    
-    "unified_lesson_content": ChatPromptTemplate.from_messages([
-        SystemMessagePromptTemplate.from_template(GENERATE_STRUCTURED_CONTENT_SYSTEM_MESSAGE),
-        HumanMessagePromptTemplate.from_template("""
+        """),
+        ]
+    ),
+    "unified_lesson_content": ChatPromptTemplate.from_messages(
+        [
+            SystemMessagePromptTemplate.from_template(
+                GENERATE_STRUCTURED_CONTENT_SYSTEM_MESSAGE
+            ),
+            HumanMessagePromptTemplate.from_template("""
         Generate ALL content blocks AND anchors for this lesson in one comprehensive response.
         
         Lesson: {lesson_title}
@@ -320,9 +354,7 @@ GENERATE_STRUCTURED_CONTENT_PROMPTS = {
         
         Source Context:
         Integration Rationale: {integration_rationale}
-        Pages: {page_numbers}
-        PDF Content: {pdf_content}
-        Chunk ID: {chunk_id}
+        PDF Content on which the lessons content should be grounded: {pdf_content}
         
         Generate the following content blocks WITH their corresponding anchors:
         
@@ -371,42 +403,38 @@ GENERATE_STRUCTURED_CONTENT_PROMPTS = {
         
         1. CONCEPT ANCHORS (1-2 anchors):
         - Extract key concept definitions and explanations from PDF content
-        - Use exact excerpts (100-300 words) that define core financial terms
+        - Use exact and concise excerpts that define core financial terms
         - Link to concept blocks that explain these terms
         - Title: descriptive concept name, Short Label: concept_[number]
         
         2. REGULATORY ANCHORS (1-2 anchors):
         - Extract SEBI guidelines, compliance requirements, or regulatory context
-        - Use exact excerpts that show regulatory framework or investor protection
+        - Use exact and concise excerpts that show regulatory framework or investor protection
         - Link to quiz and reflection blocks for compliance understanding
         - Title: specific regulation/guideline name, Short Label: regulation_[number]
         
         3. EXAMPLE ANCHORS (1-2 anchors):
         - Extract practical examples, case studies, or calculation methods from PDF
-        - Use exact excerpts that demonstrate real-world applications
+        - Use exact and concise excerpts that demonstrate real-world applications
         - Link to example blocks that build upon these scenarios
         - Title: example scenario name, Short Label: example_[number]
         
         For each anchor, ensure:
-        - source_type: SEBI_PDF
-        - title: Descriptive title from PDF content
         - short_label: Consistent naming (concept_1, regulation_1, example_1)
         - excerpt: Exact text from PDF (100-300 words)
-        - document_title: "SEBI Financial Education Booklet"
-        - page_numbers: Actual pages from the provided page numbers
-        - relevance_tags: Keywords matching the content theme
-        - created_from_chunk: Use the provided chunk_id
-        - confidence_score: 0.8-0.95 based on content relevance
         
         Ensure blocks reference their corresponding anchors via anchor_references field.
         All content should be coherent, build upon each other, and maintain consistent anchor linking.
         
-        """)
-    ]),
-    
-    "voice_script": ChatPromptTemplate.from_messages([
-        SystemMessagePromptTemplate.from_template(GENERATE_STRUCTURED_CONTENT_SYSTEM_MESSAGE),
-        HumanMessagePromptTemplate.from_template("""
+        """),
+        ]
+    ),
+    "voice_script": ChatPromptTemplate.from_messages(
+        [
+            SystemMessagePromptTemplate.from_template(
+                GENERATE_STRUCTURED_CONTENT_SYSTEM_MESSAGE
+            ),
+            HumanMessagePromptTemplate.from_template("""
         Create a Socratic voice learning script for this lesson.
         
         Lesson: {lesson_title}
@@ -437,6 +465,7 @@ GENERATE_STRUCTURED_CONTENT_PROMPTS = {
         
         Each step should be conversational and encourage active thinking within the lesson framework.
         
-        """)
-    ])
+        """),
+        ]
+    ),
 }

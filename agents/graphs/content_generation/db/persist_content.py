@@ -243,11 +243,9 @@ def prepare_anchor_document(anchor: Dict[str, Any], session_id: str) -> Dict[str
         "excerpt": anchor.get("excerpt", ""),
         "source_url": anchor.get("source_url", ""),
         "document_title": anchor.get("document_title", ""),
-        "page_numbers": anchor.get("page_numbers", []),
         "section": anchor.get("section", ""),
         "last_verified_at": datetime.utcnow(),
         "relevance_tags": anchor.get("relevance_tags", []),
-        "created_from_chunk": session_id,
         "confidence_score": anchor.get("confidence_score", 0.8),
         "created_at": datetime.utcnow(),
     }

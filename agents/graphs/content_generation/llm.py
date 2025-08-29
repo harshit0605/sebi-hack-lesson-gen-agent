@@ -79,6 +79,7 @@ class LLMClient:
         return ChatOpenAI(
             model=config["openai_model"],
             api_key=api_key,
+            # reasoning_effort="high",
         )
 
     def _create_gemini_client(self, config: dict) -> ChatGoogleGenerativeAI:
@@ -92,41 +93,43 @@ class LLMClient:
         return ChatGoogleGenerativeAI(
             model=config["gemini_model"],
             google_api_key=api_key,
+            disable_streaming=True,
+            tags=["nostream"],
         )
 
     def _get_config(self) -> dict:
         """Get configuration based on task type with both OpenAI and Gemini models"""
         configs = {
             TaskType.CONTENT_ANALYSIS: {
-                "openai_model": "gpt-5-mini",
+                "openai_model": "gpt-4.1",
                 "gemini_model": "gemini-2.5-flash",
             },
             TaskType.LESSON_CREATION: {
-                "openai_model": "gpt-5-mini",
+                "openai_model": "o4-mini",
                 "gemini_model": "gemini-2.5-flash",
             },
             TaskType.CONTENT_GENERATION: {
-                "openai_model": "gpt-5-mini",
+                "openai_model": "o4-mini",
                 "gemini_model": "gemini-2.5-flash",
             },
             TaskType.QUIZ_GENERATION: {
-                "openai_model": "gpt-5-mini",
+                "openai_model": "o4-mini",
                 "gemini_model": "gemini-2.5-flash",
             },
             TaskType.INTEGRATION_PLANNING: {
-                "openai_model": "gpt-5-mini",
+                "openai_model": "o4-mini",
                 "gemini_model": "gemini-2.5-flash",
             },
             TaskType.VALIDATION: {
-                "openai_model": "gpt-5-mini",
+                "openai_model": "o4-mini",
                 "gemini_model": "gemini-2.5-flash",
             },
             TaskType.VOICE_SCRIPT: {
-                "openai_model": "gpt-5-mini",
+                "openai_model": "o4-mini",
                 "gemini_model": "gemini-2.5-flash",
             },
             TaskType.GENERATE_LESSONS: {
-                "openai_model": "gpt-5",
+                "openai_model": "o4-mini",
                 "gemini_model": "gemini-2.5-pro",
             },
         }

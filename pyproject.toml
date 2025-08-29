@@ -52,6 +52,7 @@ dependencies = [
     "langchain-google-genai>=2.1.9",
     "langgraph-cli[inmem]>=0.3.8",
     "motor>=3.7.1",
+    "pytest>=8.4.1",
 ]
 
 [project.optional-dependencies]

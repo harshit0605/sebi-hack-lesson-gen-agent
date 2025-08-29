@@ -213,6 +213,19 @@ async def persist_to_database_node(state: LessonCreationState) -> LessonCreation
         if state["anchors"]:
             anchors_dict = [anchor.model_dump() for anchor in state["anchors"]]
 
+        # Enrich anchors with state-derived source metadata to avoid relying on LLM output
+        if anchors_dict:
+            source_url = state.get("source_url", "")
+            # Fallback to original pdf_source if source_url not explicitly set
+            if not source_url:
+                source_url = state.get("pdf_source", "")
+            source_type = state.get("source_type", "SEBI_PDF")
+
+            for a in anchors_dict:
+                a.setdefault("source_url", source_url)
+                a.setdefault("source_type", source_type)
+                # Do not persist page_numbers or created_from_chunk on anchors (per design)
+
         integration_plan_dict = {}
         if state["integration_plan"]:
             integration_plan_dict = state["integration_plan"].model_dump()

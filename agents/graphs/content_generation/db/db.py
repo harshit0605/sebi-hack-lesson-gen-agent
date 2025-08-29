@@ -12,7 +12,7 @@ MONGODB_URL = os.getenv(
     "MONGODB_URL",
     "mongodb+srv://karnatak95:E1gwr8l8n9FKlZwF@cluster0.pmvh3ud.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0",
 )
-DATABASE_NAME = os.getenv("DATABASE_NAME", "sebi_lesson_creator")
+DATABASE_NAME = os.getenv("MONGODB_DB", "sebi_lesson_creator")
 print(MONGODB_URL)
 print(DATABASE_NAME)
 # Global MongoDB client (initialized once)
